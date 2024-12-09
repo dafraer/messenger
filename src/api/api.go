@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 
@@ -15,40 +14,40 @@ type Server struct {
 	logger  *zap.SugaredLogger
 }
 
-func New() *Server {
-	//Create websocket manager
-	manager := ws.NewManager()
-
-	//Create logger
-	logger, err := zap.NewDevelopment()
-	var sugar *zap.SugaredLogger
-	if logger != nil {
-		sugar = logger.Sugar()
-	}
-
-	if err != nil {
-		panic(fmt.Errorf("error while creating new Logger, %v ", err))
-	}
+func New(manager *ws.Manager, logger *zap.SugaredLogger) *Server {
 	return &Server{
 		manager: manager,
-		logger:  sugar,
+		logger:  logger,
 	}
 }
 
-func (s *Server) Run(ctx context.Context, addr string) {
+func (s *Server) Run(ctx context.Context, addr string) error {
 	srv := &http.Server{
 		Addr:        addr,
 		BaseContext: func(net.Listener) context.Context { return ctx },
 	}
-	http.HandleFunc("/ws", s.ServeWS)
-	srv.ListenAndServe()
+	http.HandleFunc("/ws", s.serveWS)
+	if err := srv.ListenAndServe(); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (s *Server) ServeWS(w http.ResponseWriter, r *http.Request) {
-	//Upgrade http request
+// serveWS is an http handler that upgrades to a websocket connection
+func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
+	//Upgrade connection
 	conn, err := s.manager.WSUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		s.logger.Errorw("error upgrading connection", "err", err)
 	}
-	conn.Close()
+
+	//Create a new client
+	client := ws.NewClient(conn, s.manager)
+
+	//Add client to client list
+	s.manager.AddClient(client)
+
+	//Start read/write proccesses in seperate gproutines
+	go client.ReadMessages()
+	go client.WriteMessages()
 }
