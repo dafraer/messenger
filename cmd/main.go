@@ -6,6 +6,11 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/dafraer/messenger/src/store"
+	"github.com/dafraer/messenger/src/token"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
 	"github.com/dafraer/messenger/src/api"
 	"github.com/dafraer/messenger/src/ws"
 	"go.uber.org/zap"
@@ -25,10 +30,27 @@ func main() {
 	//Create a websocket manager
 	manager := ws.NewManager(sugar)
 
-	//Create the server
-	s := api.New(manager, sugar)
+	//Create jwt token manager
+	jwtManager := token.New("secret_key")
+
+	//Create context
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+	//Create storage
+	uri := "mongodb://localhost:27017"
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	if err != nil {
+		panic(err)
+	}
+	storage := store.New(client)
+	defer func() {
+		if err := client.Disconnect(ctx); err != nil {
+			panic(err)
+		}
+	}()
+	//Create the server
+	s := api.New(manager, sugar, jwtManager, storage)
 
 	//Run server
 	if err := s.Run(ctx, "localhost:8080"); err != nil {
