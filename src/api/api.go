@@ -17,16 +17,16 @@ import (
 
 const minPasswordLength = 8
 
+type authRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 type Server struct {
 	manager      *ws.Manager
 	logger       *zap.SugaredLogger
 	tokenManager *token.JWTManager
 	store        *store.Storage
-}
-
-type authData struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
 }
 
 func New(manager *ws.Manager, logger *zap.SugaredLogger, tokenManager *token.JWTManager, store *store.Storage) *Server {
@@ -43,13 +43,26 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 		Addr:        addr,
 		BaseContext: func(net.Listener) context.Context { return ctx },
 	}
+	//Serves websocket connections
 	http.HandleFunc("/ws", s.authorize(s.serveWS))
+	//handles registering logic
 	http.HandleFunc("/register", s.handleRegister)
+	//handles login logic
 	http.HandleFunc("/login", s.handleLogin)
+	//PUBLIC Returns non-sensitive user data
+	http.HandleFunc("/user/{username}", s.handleUser)
+	//PRIVATE returns list of user's chats
+	http.HandleFunc("/chats/{username}", s.handleChats)
+	//PRIVATE returns messages from a chat by id
+	http.HandleFunc("/{chatId}/messages", s.handleMessages)
+	//PUBLIC returns users with similar username
+	http.HandleFunc("/search/{username}", s.handleSearch)
+	//PRIVATE creates new chat
+	http.HandleFunc("/newChat", s.handleNewChat)
 	ch := make(chan error)
 	go func() {
 		defer close(ch)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			ch <- err
 			return
 		}
@@ -84,14 +97,14 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 	//Add client to client list
 	s.manager.AddClient(client)
 
-	//Start read/write proccesses in seperate gproutines
+	//Start read/write processes in separate goroutines
 	go client.ReadMessages()
 	go client.WriteMessages()
 }
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	//Get user data from request
-	var body authData
+	var body authRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		s.logger.Errorw("Error decoding json", "error", err)
@@ -112,7 +125,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Save user to the db
-	if err := s.store.NewUser(r.Context(), &store.User{Username: body.Username, Password: string(hash)}); err != nil {
+	if err := s.store.NewUser(r.Context(), body.Username, string(hash)); err != nil {
 		if errors.Is(err, store.ErrUserExists) {
 			http.Error(w, "user exists", http.StatusBadRequest)
 			return
@@ -124,7 +137,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	//Get user data from request
-	var body authData
+	var body authRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		s.logger.Errorw("Error decoding json", "error", err)
@@ -188,6 +201,145 @@ func (s *Server) authorize(fn func(w http.ResponseWriter, r *http.Request)) func
 		if claims.Subject != r.FormValue("username") {
 			http.Error(w, "Token subject and user dont match", http.StatusBadRequest)
 		}
+		r.WithContext(context.WithValue(r.Context(), "username", claims.Subject))
 		fn(w, r)
+	}
+}
+
+// handleUser writes User object as a response
+func (s *Server) handleUser(w http.ResponseWriter, r *http.Request) {
+	//Get username from the query
+	username := r.FormValue("username")
+
+	//Get user from the db
+	user, err := s.store.GetUser(r.Context(), username)
+	if err != nil {
+		s.logger.Errorw("Error getting user from the database", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	//Marshal response body
+	response, err := json.Marshal(user)
+	if err != nil {
+		http.Error(w, "Error marshaling json", http.StatusInternalServerError)
+		return
+	}
+
+	//Write response
+	w.Header().Set("Content-Type", "application/json")
+	if _, err = w.Write(response); err != nil {
+		s.logger.Errorw("Error writing a response", "error", err)
+	}
+}
+
+// handleChats handles requests at /chats/{username} endpoint. Writes list of Chat objects that are owned by the user as a response
+func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
+	//Get username form the query
+	username := r.FormValue("username")
+
+	//Check that user is authorized
+	if r.Context().Value("username") != username {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	//Get chat from the database
+	chats, err := s.store.GetChats(r.Context(), username)
+	if err != nil {
+		s.logger.Errorw("Error getting chats", "error", err)
+		http.Error(w, "Error getting chats", http.StatusInternalServerError)
+		return
+	}
+
+	//Marshal response
+	response, err := json.Marshal(chats)
+	if err != nil {
+		s.logger.Errorw("Error marshaling json", "error", err)
+		http.Error(w, "Error marshaling json", http.StatusInternalServerError)
+	}
+
+	//Write response
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write(response); err != nil {
+		s.logger.Errorw("Error writing a response", "error", err)
+	}
+}
+
+// handleMessages handles requests at /{chatId}/messages endpoint. It is used to get messages from a specific chat
+func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
+	//get chatId from the query
+	chatId := r.FormValue("chatId")
+
+	//Check if user is authorised
+	chat, err := s.store.GetChat(r.Context(), chatId)
+	if err != nil {
+		s.logger.Errorw("Error getting chat", "error", err)
+		http.Error(w, "Error getting chat", http.StatusInternalServerError)
+	}
+	if chat.Owner != r.Context().Value("username") {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	//Get messages from the database
+	messages, err := s.store.GetMessages(r.Context(), chatId)
+	if err != nil {
+		s.logger.Errorw("Error getting messages from the database", "error", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	//Marshal response
+	response, err := json.Marshal(messages)
+	if err != nil {
+		s.logger.Errorw("Error marshaling json", "error", err)
+		http.Error(w, "Error marshaling json", http.StatusInternalServerError)
+	}
+
+	//Write response
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write(response); err != nil {
+		s.logger.Errorw("Error writing a response", "error", err)
+	}
+}
+
+// handleNewChat receives a chat object and creates new chat with the owner and members specified and that object
+func (s *Server) handleNewChat(w http.ResponseWriter, r *http.Request) {
+	var body store.Chat
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		s.logger.Errorw("Error decoding json", "error", err)
+		http.Error(w, "Error decoding json", http.StatusInternalServerError)
+	}
+	if err := s.store.NewChat(r.Context(), &body); err != nil {
+		s.logger.Errorw("Error creating chat", "error", err)
+		http.Error(w, "Error creating chat", http.StatusInternalServerError)
+	}
+
+}
+
+// handleSearch receives username to search for and writes a slice of similar usernames as a response
+func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
+	//Get username to search for from the query
+	username := r.FormValue("username")
+
+	//Find usernames in db
+	usernames, err := s.store.FindSimilarUsers(r.Context(), username)
+	if err != nil {
+		s.logger.Errorw("Error getting users from the database", "error", err)
+		http.Error(w, "Error getting users from the database", http.StatusInternalServerError)
+	}
+
+	//Marshal response body
+	response, err := json.Marshal(usernames)
+	if err != nil {
+		s.logger.Errorw("Error marshaling json", "error", err)
+		http.Error(w, "Error marshaling json", http.StatusInternalServerError)
+	}
+
+	//Write response
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write(response); err != nil {
+		s.logger.Errorw("Error writing a response", "error", err)
 	}
 }
