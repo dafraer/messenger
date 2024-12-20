@@ -2,7 +2,6 @@ package ws
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -12,11 +11,10 @@ import (
 var ErrEventNotSupported = errors.New("this event type is not supported")
 
 type Manager struct {
-	WSUpgrader    websocket.Upgrader
-	clients       ClientList
-	mu            sync.RWMutex
-	logger        *zap.SugaredLogger
-	eventHandlers map[string]EventHandler
+	WSUpgrader websocket.Upgrader
+	clients    ClientList
+	mu         sync.RWMutex
+	logger     *zap.SugaredLogger
 }
 
 func NewManager(logger *zap.SugaredLogger) *Manager {
@@ -25,33 +23,11 @@ func NewManager(logger *zap.SugaredLogger) *Manager {
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 		},
-		clients:       make(ClientList),
-		mu:            sync.RWMutex{},
-		logger:        logger,
-		eventHandlers: make(map[string]EventHandler),
+		clients: make(ClientList),
+		mu:      sync.RWMutex{},
+		logger:  logger,
 	}
-	m.setUpEventHandlers()
 	return m
-}
-
-// for now doesnt makes sense will fix later
-func (m *Manager) setUpEventHandlers() {
-	m.eventHandlers[EventSendMessage] = func(e Event, c *Client) error {
-		fmt.Println("skibidi op op")
-		return nil
-	}
-}
-
-func (m *Manager) routeEvent(event Event, c *Client) error {
-	//If event is not present in the map throw an error
-	if handler, ok := m.eventHandlers[event.Type]; ok {
-		//Execute the handler
-		if err := handler(event, c); err != nil {
-			return err
-		}
-		return nil
-	}
-	return ErrEventNotSupported
 }
 
 func (m *Manager) AddClient(client *Client) {
@@ -67,7 +43,10 @@ func (m *Manager) RemoveClient(client *Client) {
 	//Check if client exists then delete it
 	if _, ok := m.clients[client]; ok {
 		//Close connection
-		client.connection.Close()
+		if err := client.connection.Close(); err != nil {
+			m.logger.Errorw("Error removing websocket client", "error", err)
+			return
+		}
 		//Remove client
 		delete(m.clients, client)
 	}

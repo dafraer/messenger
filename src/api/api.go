@@ -52,13 +52,14 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 	//PUBLIC Returns non-sensitive user data
 	http.HandleFunc("/user/{username}", s.handleUser)
 	//PRIVATE returns list of user's chats
-	http.HandleFunc("/chats/{username}", s.handleChats)
+	http.HandleFunc("/chats/{username}", s.authorize(s.handleChats))
 	//PRIVATE returns messages from a chat by id
-	http.HandleFunc("/{chatId}/messages", s.handleMessages)
+	http.HandleFunc("/messages/{chatId}", s.authorize(s.handleMessages))
 	//PUBLIC returns users with similar username
 	http.HandleFunc("/search/{username}", s.handleSearch)
 	//PRIVATE creates new chat
-	http.HandleFunc("/newChat", s.handleNewChat)
+	http.HandleFunc("/newChat", s.authorize(s.handleNewChat))
+	//TODO leave chat and delete chat handlers
 	ch := make(chan error)
 	go func() {
 		defer close(ch)
@@ -92,7 +93,7 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Create a new client
-	client := ws.NewClient(conn, s.manager)
+	client := ws.NewClient(conn, s.manager, r.PathValue("username"))
 
 	//Add client to client list
 	s.manager.AddClient(client)
@@ -187,6 +188,7 @@ func (s *Server) authorize(fn func(w http.ResponseWriter, r *http.Request)) func
 			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
 			return
 		}
+		s.logger.Debugw("auth header", "header", authHeader)
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
@@ -198,10 +200,8 @@ func (s *Server) authorize(fn func(w http.ResponseWriter, r *http.Request)) func
 		if err != nil {
 			http.Error(w, "Error validating token", http.StatusUnauthorized)
 		}
-		if claims.Subject != r.FormValue("username") {
-			http.Error(w, "Token subject and user dont match", http.StatusBadRequest)
-		}
-		r.WithContext(context.WithValue(r.Context(), "username", claims.Subject))
+		r = r.WithContext(context.WithValue(r.Context(), "username", claims.Subject))
+		s.logger.Debugw("authorizing user", "username", claims.Subject)
 		fn(w, r)
 	}
 }
@@ -209,10 +209,11 @@ func (s *Server) authorize(fn func(w http.ResponseWriter, r *http.Request)) func
 // handleUser writes User object as a response
 func (s *Server) handleUser(w http.ResponseWriter, r *http.Request) {
 	//Get username from the query
-	username := r.FormValue("username")
+	username := r.PathValue("username")
 
 	//Get user from the db
 	user, err := s.store.GetUser(r.Context(), username)
+
 	if err != nil {
 		s.logger.Errorw("Error getting user from the database", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -236,7 +237,7 @@ func (s *Server) handleUser(w http.ResponseWriter, r *http.Request) {
 // handleChats handles requests at /chats/{username} endpoint. Writes list of Chat objects that are owned by the user as a response
 func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 	//Get username form the query
-	username := r.FormValue("username")
+	username := r.PathValue("username")
 
 	//Check that user is authorized
 	if r.Context().Value("username") != username {
@@ -269,7 +270,7 @@ func (s *Server) handleChats(w http.ResponseWriter, r *http.Request) {
 // handleMessages handles requests at /{chatId}/messages endpoint. It is used to get messages from a specific chat
 func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 	//get chatId from the query
-	chatId := r.FormValue("chatId")
+	chatId := r.PathValue("chatId")
 
 	//Check if user is authorised
 	chat, err := s.store.GetChat(r.Context(), chatId)
@@ -311,17 +312,31 @@ func (s *Server) handleNewChat(w http.ResponseWriter, r *http.Request) {
 		s.logger.Errorw("Error decoding json", "error", err)
 		http.Error(w, "Error decoding json", http.StatusInternalServerError)
 	}
-	if err := s.store.NewChat(r.Context(), &body); err != nil {
+	if body.Owner != r.Context().Value("username") {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	id, err := s.store.NewChat(r.Context(), &body)
+	if err != nil {
 		s.logger.Errorw("Error creating chat", "error", err)
 		http.Error(w, "Error creating chat", http.StatusInternalServerError)
 	}
+	w.Header().Set("Content-Type", "application/json")
+	response, err := json.Marshal(id)
+	if err != nil {
+		s.logger.Errorw("Error marshaling json", "error", err)
+		http.Error(w, "Error marshaling json", http.StatusInternalServerError)
+	}
 
+	if _, err = w.Write(response); err != nil {
+		s.logger.Errorw("Error writing a response", "error", err)
+	}
 }
 
 // handleSearch receives username to search for and writes a slice of similar usernames as a response
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
 	//Get username to search for from the query
-	username := r.FormValue("username")
+	username := r.PathValue("username")
 
 	//Find usernames in db
 	usernames, err := s.store.FindSimilarUsers(r.Context(), username)

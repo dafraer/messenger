@@ -44,6 +44,9 @@ func main() {
 		panic(err)
 	}
 	storage := store.New(client)
+	if err := storage.Init(ctx); err != nil {
+		panic(err)
+	}
 	defer func() {
 		if err := client.Disconnect(ctx); err != nil {
 			panic(err)

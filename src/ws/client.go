@@ -13,22 +13,29 @@ const (
 	pingInterval = (pongWait * 9) / 10
 )
 
+type Message struct {
+	ChatId string `json:"chat_id"`
+	Text   string `json:"text"`
+}
+
 // ClientList is a map holding list of clients
 type ClientList map[*Client]bool
 
 // Client is a websocket client
 type Client struct {
+	username   string
 	connection *websocket.Conn
 	manager    *Manager
-	writer     chan Event
+	writer     chan Message
 	logger     *zap.SugaredLogger
 }
 
-func NewClient(conn *websocket.Conn, manager *Manager) *Client {
+func NewClient(conn *websocket.Conn, manager *Manager, username string) *Client {
 	return &Client{
+		username:   username,
 		connection: conn,
 		manager:    manager,
-		writer:     make(chan Event),
+		writer:     make(chan Message),
 		logger:     manager.logger,
 	}
 }
@@ -51,28 +58,26 @@ func (c *Client) ReadMessages() {
 
 	//Infinite loop
 	for {
-		mesageType, payload, err := c.connection.ReadMessage()
+		messageType, payload, err := c.connection.ReadMessage()
 		if err != nil {
 			c.logger.Errorw("error reading message", "err", err)
 		}
 
-		var request Event
+		var request Message
 		c.logger.Debugw("raw data", "data", string(payload))
 		if err := json.Unmarshal(payload, &request); err != nil {
-			c.logger.Errorw("error unmarshaling event", "err", err)
+			c.logger.Errorw("error unmarshalling event", "err", err)
 			break
 		}
 
-		c.logger.Infow("New message", "MessageType", mesageType, "Payload", payload)
+		//Check the type of message
 
-		//Route the event
-		if err := c.manager.routeEvent(request, c); err != nil {
-			c.logger.Errorw("error handling message", "err", err)
-		}
+		c.logger.Infow("New message", "MessageType", messageType, "Payload", request)
+
 	}
 }
 
-// WriteMessages is run in a seperate goroutine and is used to write messages over websocket conneciton
+// WriteMessages is run in a separate goroutine and is used to write messages over websocket connection
 func (c *Client) WriteMessages() {
 	//Create new ticker
 	ticker := time.NewTicker(pingInterval)
@@ -101,7 +106,7 @@ func (c *Client) WriteMessages() {
 				c.logger.Errorw("error marshaling event", "err", err)
 				return
 			}
-			//Write a regular test message
+			//Write a regular text message
 			if err := c.connection.WriteMessage(websocket.TextMessage, data); err != nil {
 				c.logger.Errorw("error writing message:", err)
 			}
