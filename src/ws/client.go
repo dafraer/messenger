@@ -43,7 +43,11 @@ func NewClient(conn *websocket.Conn, manager *Manager, username string) *Client 
 // ReadMessages is run in a goroutine and is used for reading incoming messages over a websocket connection
 func (c *Client) ReadMessages() {
 	//Graceful close of the connection
-	defer c.manager.RemoveClient(c)
+	defer func() {
+		if err := c.manager.RemoveClient(c); err != nil {
+			c.logger.Errorw("Error removing client", "error", err)
+		}
+	}()
 
 	//Set message size limit to 512 bytes
 	c.connection.SetReadLimit(512)
@@ -71,9 +75,14 @@ func (c *Client) ReadMessages() {
 		}
 
 		//Check the type of message
-
 		c.logger.Infow("New message", "MessageType", messageType, "Payload", request)
 
+		//Iterate through chat members and send message
+		for client, _ := range c.manager.chats[request.ChatId] {
+			if client.username != c.username {
+				client.writer <- request
+			}
+		}
 	}
 }
 
@@ -84,7 +93,9 @@ func (c *Client) WriteMessages() {
 
 	//Gracefully remove the client
 	defer func() {
-		c.manager.RemoveClient(c)
+		if err := c.manager.RemoveClient(c); err != nil {
+			c.logger.Errorw("error removing client", "error", err)
+		}
 		ticker.Stop()
 	}()
 

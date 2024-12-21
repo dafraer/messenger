@@ -27,8 +27,6 @@ func main() {
 	if err != nil {
 		panic(fmt.Errorf("error while creating new Logger, %v ", err))
 	}
-	//Create a websocket manager
-	manager := ws.NewManager(sugar)
 
 	//Create jwt token manager
 	jwtManager := token.New("secret_key")
@@ -52,6 +50,10 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	//Create a websocket manager
+	manager := ws.NewManager(sugar, storage)
+
 	//Create the server
 	s := api.New(manager, sugar, jwtManager, storage)
 

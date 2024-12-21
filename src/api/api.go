@@ -96,7 +96,10 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 	client := ws.NewClient(conn, s.manager, r.PathValue("username"))
 
 	//Add client to client list
-	s.manager.AddClient(client)
+	if err := s.manager.AddClient(client); err != nil {
+		s.logger.Errorw("error adding client", "error", err)
+		http.Error(w, "Error adding client", http.StatusInternalServerError)
+	}
 
 	//Start read/write processes in separate goroutines
 	go client.ReadMessages()

@@ -23,7 +23,7 @@ type User struct {
 }
 
 type Chat struct {
-	Id      *string  `bson:"_id, omitempty" json:"id,omitempty"`
+	Id      string   `bson:"_id, omitempty" json:"id,omitempty"`
 	Members []string `bson:"members" json:"members"`
 	Owner   string   `bson:"owner" json:"owner"`
 }
