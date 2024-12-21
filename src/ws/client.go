@@ -1,7 +1,9 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
+	"github.com/dafraer/messenger/src/store"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -14,6 +16,7 @@ const (
 )
 
 type Message struct {
+	From   string `json:"from"`
 	ChatId string `json:"chat_id"`
 	Text   string `json:"text"`
 }
@@ -74,14 +77,22 @@ func (c *Client) ReadMessages() {
 			break
 		}
 
-		//Check the type of message
 		c.logger.Infow("New message", "MessageType", messageType, "Payload", request)
 
+		//set message author to the actual client to prevent malicious use
+		request.From = c.username
+
 		//Iterate through chat members and send message
-		for client, _ := range c.manager.chats[request.ChatId] {
-			if client.username != c.username {
+		//Do I really need to have a map here?
+		for _, client := range c.manager.chats[request.ChatId] {
+			if client != c && client != nil {
 				client.writer <- request
 			}
+		}
+
+		//Save message to the database
+		if err := c.manager.store.SaveMessage(context.TODO(), store.Message{ChatId: request.ChatId, From: c.username, Text: request.Text, Time: time.Now().UTC().Unix()}); err != nil {
+			c.logger.Errorw("error saving message", "err", err)
 		}
 	}
 }

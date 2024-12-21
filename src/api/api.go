@@ -55,11 +55,10 @@ func (s *Server) Run(ctx context.Context, addr string) error {
 	http.HandleFunc("/chats/{username}", s.authorize(s.handleChats))
 	//PRIVATE returns messages from a chat by id
 	http.HandleFunc("/messages/{chatId}", s.authorize(s.handleMessages))
-	//PUBLIC returns users with similar username
-	http.HandleFunc("/search/{username}", s.handleSearch)
 	//PRIVATE creates new chat
 	http.HandleFunc("/newChat", s.authorize(s.handleNewChat))
-	//TODO leave chat and delete chat handlers
+	//PRIVATE removes user from chat. user can only remove others if they are owner of the chat
+	http.HandleFunc("/remove/{chatId}/{username}", s.authorize(s.handleRemove))
 	ch := make(chan error)
 	go func() {
 		defer close(ch)
@@ -93,7 +92,8 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//Create a new client
-	client := ws.NewClient(conn, s.manager, r.PathValue("username"))
+	username := r.Context().Value("username")
+	client := ws.NewClient(conn, s.manager, username.(string))
 
 	//Add client to client list
 	if err := s.manager.AddClient(client); err != nil {
@@ -216,12 +216,14 @@ func (s *Server) handleUser(w http.ResponseWriter, r *http.Request) {
 
 	//Get user from the db
 	user, err := s.store.GetUser(r.Context(), username)
-
 	if err != nil {
 		s.logger.Errorw("Error getting user from the database", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	//Set password to nil so it's omitted when marshaling
+	user.Password = ""
 
 	//Marshal response body
 	response, err := json.Marshal(user)
@@ -336,28 +338,29 @@ func (s *Server) handleNewChat(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleSearch receives username to search for and writes a slice of similar usernames as a response
-func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request) {
-	//Get username to search for from the query
-	username := r.PathValue("username")
+func (s *Server) handleRemove(w http.ResponseWriter, r *http.Request) {
+	chatId := r.PathValue("chatId")
 
-	//Find usernames in db
-	usernames, err := s.store.FindSimilarUsers(r.Context(), username)
-	if err != nil {
-		s.logger.Errorw("Error getting users from the database", "error", err)
-		http.Error(w, "Error getting users from the database", http.StatusInternalServerError)
+	//Check if user removes themselves
+	if r.Context().Value("username").(string) != r.PathValue("username") {
+		//Get chat from the DB to check if user can delete others
+		chat, err := s.store.GetChat(r.Context(), chatId)
+		if err != nil {
+			s.logger.Errorw("Error getting chat", "error", err)
+			http.Error(w, "Error getting chat", http.StatusInternalServerError)
+			return
+		}
+
+		//If user isn't the chat owner ffs
+		if chat.Owner != r.Context().Value("username") {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 	}
 
-	//Marshal response body
-	response, err := json.Marshal(usernames)
-	if err != nil {
-		s.logger.Errorw("Error marshaling json", "error", err)
-		http.Error(w, "Error marshaling json", http.StatusInternalServerError)
-	}
-
-	//Write response
-	w.Header().Set("Content-Type", "application/json")
-	if _, err := w.Write(response); err != nil {
-		s.logger.Errorw("Error writing a response", "error", err)
+	if err := s.store.RemoveUserFromChat(r.Context(), r.PathValue("username"), chatId); err != nil {
+		s.logger.Errorw("Error leaving chat", "error", err)
+		http.Error(w, "Error leaving chat", http.StatusInternalServerError)
+		return
 	}
 }

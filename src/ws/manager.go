@@ -17,7 +17,7 @@ type Manager struct {
 	clients    ClientList
 	mu         sync.RWMutex
 	logger     *zap.SugaredLogger
-	chats      map[string]map[*Client]struct{}
+	chats      map[string][]*Client
 	store      *store.Storage
 }
 
@@ -31,6 +31,7 @@ func NewManager(logger *zap.SugaredLogger, store *store.Storage) *Manager {
 		mu:      sync.RWMutex{},
 		logger:  logger,
 		store:   store,
+		chats:   make(map[string][]*Client),
 	}
 	return m
 }
@@ -39,12 +40,13 @@ func (m *Manager) AddClient(client *Client) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	chats, err := m.store.GetChats(context.TODO(), client.username)
+	m.logger.Debugw("Chats", "user", client.username, "chats", chats)
 	if err != nil {
 		return err
 	}
 	m.clients[client] = true
 	for _, chat := range chats {
-		m.chats[chat.Id][client] = struct{}{}
+		m.chats[chat.Id] = append(m.chats[chat.Id], client)
 	}
 	return nil
 }
@@ -57,8 +59,17 @@ func (m *Manager) RemoveClient(client *Client) error {
 	if err != nil {
 		return err
 	}
+	//remove user from chats
 	for _, chat := range chats {
-		delete(m.chats[chat.Id], client)
+		for i, c := range m.chats[chat.Id] {
+			if c == client {
+				if i < len(m.chats[chat.Id])-1 {
+					m.chats[chat.Id] = append(m.chats[chat.Id][:i], m.chats[chat.Id][i+1:]...)
+				} else {
+					m.chats[chat.Id] = m.chats[chat.Id][:i]
+				}
+			}
+		}
 	}
 
 	//Check if client exists then delete it
