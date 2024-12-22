@@ -15,24 +15,24 @@ const (
 	pingInterval = (pongWait * 9) / 10
 )
 
+// Message struct is the message that we receive over websocket
 type Message struct {
 	From   string `json:"from"`
 	ChatId string `json:"chat_id"`
 	Text   string `json:"text"`
 }
 
-// ClientList is a map holding list of clients
-type ClientList map[*Client]bool
-
 // Client is a websocket client
 type Client struct {
 	username   string
 	connection *websocket.Conn
 	manager    *Manager
-	writer     chan Message
-	logger     *zap.SugaredLogger
+	//writer is a channel over which we send messages
+	writer chan Message
+	logger *zap.SugaredLogger
 }
 
+// NewClient creates new websocket client
 func NewClient(conn *websocket.Conn, manager *Manager, username string) *Client {
 	return &Client{
 		username:   username,
@@ -44,10 +44,10 @@ func NewClient(conn *websocket.Conn, manager *Manager, username string) *Client 
 }
 
 // ReadMessages is run in a goroutine and is used for reading incoming messages over a websocket connection
-func (c *Client) ReadMessages() {
+func (c *Client) ReadMessages(ctx context.Context) {
 	//Graceful close of the connection
 	defer func() {
-		if err := c.manager.RemoveClient(c); err != nil {
+		if err := c.manager.RemoveClient(ctx, c); err != nil {
 			c.logger.Errorw("Error removing client", "error", err)
 		}
 	}()
@@ -57,33 +57,39 @@ func (c *Client) ReadMessages() {
 
 	//Configure wait time for pong responses
 	if err := c.connection.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
-		c.logger.Errorw("error setting pong wait time", "err", err)
+		c.logger.Errorw("Error setting pong wait time", "error", err)
 		return
 	}
+
 	//Configure handling pong responses
-	c.connection.SetPongHandler(c.PongHandler)
+	c.connection.SetPongHandler(func(string) error {
+		if err := c.connection.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+			c.logger.Errorw("Error setting pong wait time", "error", err)
+			return err
+		}
+		return nil
+	})
 
-	//Infinite loop
+	//Infinite loop in which we read messages from the websocket connection
 	for {
-		messageType, payload, err := c.connection.ReadMessage()
+		//Read message from websocket connection
+		_, payload, err := c.connection.ReadMessage()
 		if err != nil {
-			c.logger.Errorw("error reading message", "err", err)
+			c.logger.Errorw("Error reading message", "error", err)
+			return
 		}
 
+		//Unmarshal message into message struct
 		var request Message
-		c.logger.Debugw("raw data", "data", string(payload))
 		if err := json.Unmarshal(payload, &request); err != nil {
-			c.logger.Errorw("error unmarshalling event", "err", err)
-			break
+			c.logger.Errorw("Error unmarshalling event", "error", err)
+			continue
 		}
 
-		c.logger.Infow("New message", "MessageType", messageType, "Payload", request)
-
-		//set message author to the actual client to prevent malicious use
+		//Set message author to the actual client to prevent impersonation
 		request.From = c.username
 
 		//Iterate through chat members and send message
-		//Do I really need to have a map here?
 		for _, client := range c.manager.chats[request.ChatId] {
 			if client != c && client != nil {
 				client.writer <- request
@@ -92,19 +98,19 @@ func (c *Client) ReadMessages() {
 
 		//Save message to the database
 		if err := c.manager.store.SaveMessage(context.TODO(), store.Message{ChatId: request.ChatId, From: c.username, Text: request.Text, Time: time.Now().UTC().Unix()}); err != nil {
-			c.logger.Errorw("error saving message", "err", err)
+			c.logger.Errorw("Error saving message", "error", err)
 		}
 	}
 }
 
 // WriteMessages is run in a separate goroutine and is used to write messages over websocket connection
-func (c *Client) WriteMessages() {
+func (c *Client) WriteMessages(ctx context.Context) {
 	//Create new ticker
 	ticker := time.NewTicker(pingInterval)
 
 	//Gracefully remove the client
 	defer func() {
-		if err := c.manager.RemoveClient(c); err != nil {
+		if err := c.manager.RemoveClient(ctx, c); err != nil {
 			c.logger.Errorw("error removing client", "error", err)
 		}
 		ticker.Stop()
@@ -118,35 +124,30 @@ func (c *Client) WriteMessages() {
 			if !ok {
 				//Notify front end that connection channel is closed
 				if err := c.connection.WriteMessage(websocket.CloseMessage, nil); err != nil {
-					c.manager.logger.Errorw("error writing message:", err)
+					c.manager.logger.Errorw("Error writing message:", "error", err)
 				}
 				return
 			}
 
+			//Marshal message into json
 			data, err := json.Marshal(message)
 			if err != nil {
-				c.logger.Errorw("error marshaling event", "err", err)
+				c.logger.Errorw("Error marshaling message", "error", err)
 				return
 			}
-			//Write a regular text message
-			if err := c.connection.WriteMessage(websocket.TextMessage, data); err != nil {
-				c.logger.Errorw("error writing message:", err)
-			}
-			c.logger.Infow("Message has been sent", "msg", message)
 
+			//Write text message to the websocket connection
+			if err := c.connection.WriteMessage(websocket.TextMessage, data); err != nil {
+				c.logger.Errorw("Error writing message:", "error", err)
+			}
 		case <-ticker.C:
 			//Send the ping
 			if err := c.connection.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				c.logger.Errorw("error writing ping message", "err", err)
+				c.logger.Errorw("Error writing ping message", "error", err)
 				return
 			}
 
 		}
 	}
 
-}
-
-func (c *Client) PongHandler(pongMsg string) error {
-	//Current time + pong.Wait time
-	return c.connection.SetReadDeadline(time.Now().Add(pongWait))
 }

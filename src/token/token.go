@@ -15,18 +15,22 @@ type JWTManager struct {
 	signingKey string
 }
 
+// New creates new JWT token manager using provided signing key
 func New(signingKey string) *JWTManager {
 	return &JWTManager{
 		signingKey: signingKey,
 	}
 }
 
-// NewAccessToken generates a JWT token using SHA512 algorithm
+// NewToken generates a JWT token using SHA512 algorithm
 func (manager *JWTManager) NewToken(userId string) (string, error) {
+	//Define the payload
 	claims := jwt.RegisteredClaims{
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenLiveSpan)),
 		Subject:   userId,
 	}
+
+	//Create token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	accessToken, err := token.SignedString([]byte(manager.signingKey))
 	if err != nil {
@@ -35,9 +39,11 @@ func (manager *JWTManager) NewToken(userId string) (string, error) {
 	return accessToken, nil
 }
 
-// Verify verifies JWT token ans returns token's payload, refresh parameter decides if we check if token has expired
+// Verify verifies JWT token and returns token's payload
 func (manager *JWTManager) Verify(tokenString string) (*jwt.RegisteredClaims, error) {
+	//Parse token
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		//Check signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("invalid signing method")
 		}
@@ -48,6 +54,7 @@ func (manager *JWTManager) Verify(tokenString string) (*jwt.RegisteredClaims, er
 		return nil, err
 	}
 
+	//Get token claims
 	claims, ok := token.Claims.(*jwt.RegisteredClaims)
 	if !ok {
 		return nil, fmt.Errorf("invalid token claims")

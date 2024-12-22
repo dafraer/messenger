@@ -4,9 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -36,36 +35,38 @@ type Message struct {
 	Time int64 `bson:"time"`
 }
 
+// New creates new storage instance with mongo client as the only field
 func New(client *mongo.Client) *Storage {
 	return &Storage{
 		db: client,
 	}
 }
 
-func (s *Storage) Init(ctx context.Context) error {
-	coll := s.db.Database("messenger").Collection("users")
-	model := mongo.IndexModel{Keys: bson.D{{"username", "text"}}}
-	_, err := coll.Indexes().CreateOne(ctx, model)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
+// NewUser adds new user to the database using username and password
 func (s *Storage) NewUser(ctx context.Context, username, password string) error {
+	//Get users collection
 	coll := s.db.Database("messenger").Collection("users")
+
 	//Check if user exists
 	var u User
 	err := coll.FindOne(ctx, bson.D{{Key: "username", Value: username}}).Decode(&u)
+
+	//Return error if user with the same username already exists
 	if !errors.Is(err, mongo.ErrNoDocuments) {
 		return ErrUserExists
 	}
+
+	//Create new user in the database
 	_, err = coll.InsertOne(ctx, bson.D{{Key: "username", Value: username}, {Key: "password", Value: password}})
 	return err
 }
 
+// GetUser returns all user info
 func (s *Storage) GetUser(ctx context.Context, username string) (*User, error) {
+	//Get users collection
 	coll := s.db.Database("messenger").Collection("users")
+
+	//Get user from the database by username
 	var user User
 	if err := coll.FindOne(ctx, bson.D{{Key: "username", Value: username}}).Decode(&user); err != nil {
 		return nil, err
@@ -73,29 +74,43 @@ func (s *Storage) GetUser(ctx context.Context, username string) (*User, error) {
 	return &user, nil
 }
 
-func (s *Storage) NewChat(ctx context.Context, chat *Chat) (interface{}, error) {
+// NewChat creates new chat using members and owner fields. Returns chat id
+func (s *Storage) NewChat(ctx context.Context, members []string, owner string) (interface{}, error) {
+	//Get chats collection
 	coll := s.db.Database("messenger").Collection("chats")
-	res, err := coll.InsertOne(ctx, bson.D{{Key: "members", Value: chat.Members}, {Key: "owner", Value: chat.Owner}})
-	if res != nil {
-		return res.InsertedID, err
+
+	//Create new chat in the database
+	res, err := coll.InsertOne(ctx, bson.D{{Key: "members", Value: members}, {Key: "owner", Value: owner}})
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	return res.InsertedID, err
 }
 
+// DeleteChat deletes chat from the database by chat id
 func (s *Storage) DeleteChat(ctx context.Context, chatId string) error {
+	//Get chats collection
 	coll := s.db.Database("messenger").Collection("chats")
+
+	//Delete chat
 	_, err := coll.DeleteOne(ctx, bson.D{{Key: "_id", Value: chatId}})
 	return err
 }
 
+// GetChat returns chat info by chat id
 func (s *Storage) GetChat(ctx context.Context, chatId string) (*Chat, error) {
+	//Get chats collection
 	coll := s.db.Database("messenger").Collection("chats")
-	var chat Chat
-	objID, err := primitive.ObjectIDFromHex(chatId)
+
+	//Convert chatId to objectId type
+	objId, err := primitive.ObjectIDFromHex(chatId)
 	if err != nil {
 		return nil, err
 	}
-	if err := coll.FindOne(ctx, bson.D{{Key: "_id", Value: objID}}).Decode(&chat); err != nil {
+
+	//Get chat info from the database
+	var chat Chat
+	if err := coll.FindOne(ctx, bson.D{{Key: "_id", Value: objId}}).Decode(&chat); err != nil {
 		return nil, err
 	}
 	return &chat, nil
@@ -103,39 +118,65 @@ func (s *Storage) GetChat(ctx context.Context, chatId string) (*Chat, error) {
 
 // GetChats returns all chats where user is a member
 func (s *Storage) GetChats(ctx context.Context, username string) ([]Chat, error) {
+	//Get chats collection
 	coll := s.db.Database("messenger").Collection("chats")
+
+	//Find chats where user is a member
 	var chats []Chat
 	cursor, err := coll.Find(ctx, bson.D{{"members", bson.M{"$in": []string{username}}}})
 	if err != nil {
 		return nil, err
 	}
+
+	//Parse chats into chats struct
 	if err = cursor.All(ctx, &chats); err != nil {
 		return nil, err
 	}
+
 	return chats, nil
 }
 
-// GetMessages returns list of messages in a specific chat
+// GetMessages returns list of messages in a chat by chat id
 func (s *Storage) GetMessages(ctx context.Context, chatId string) ([]Message, error) {
+	//Get messages collection
 	coll := s.db.Database("messenger").Collection("messages")
+
+	//Find messages from a specific chat
 	var messages []Message
 	cursor, err := coll.Find(ctx, bson.D{{"chat_id", chatId}})
 	if err != nil {
 		return nil, err
 	}
+
+	//Parse messages into messages struct
 	if err = cursor.All(ctx, &messages); err != nil {
 		return nil, err
 	}
 	return messages, nil
 }
 
+// SaveMessage saves message to the database
 func (s *Storage) SaveMessage(ctx context.Context, msg Message) error {
+	//Get messages collection
 	coll := s.db.Database("messenger").Collection("messages")
+
+	//Create new message in the database
 	_, err := coll.InsertOne(ctx, msg)
 	return err
 }
 
-// TODO: fix
+// RemoveUserFromChat removes user from a specific by deleting username from the members array
 func (s *Storage) RemoveUserFromChat(ctx context.Context, username, chatId string) error {
-	return nil
+	//Get chats collection
+	coll := s.db.Database("messenger").Collection("chats")
+
+	//Convert chatId to object id type
+	objId, err := primitive.ObjectIDFromHex(chatId)
+	if err != nil {
+		return err
+	}
+
+	//Delete user from members array
+	_, err = coll.UpdateOne(ctx, bson.D{{"_id", objId}}, bson.D{{"$pull", bson.D{{"members", username}}}})
+	return err
 }
