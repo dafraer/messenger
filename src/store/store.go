@@ -87,16 +87,6 @@ func (s *Storage) NewChat(ctx context.Context, members []string, owner string) (
 	return res.InsertedID, err
 }
 
-// DeleteChat deletes chat from the database by chat id
-func (s *Storage) DeleteChat(ctx context.Context, chatId string) error {
-	//Get chats collection
-	coll := s.db.Database("messenger").Collection("chats")
-
-	//Delete chat
-	_, err := coll.DeleteOne(ctx, bson.D{{Key: "_id", Value: chatId}})
-	return err
-}
-
 // GetChat returns chat info by chat id
 func (s *Storage) GetChat(ctx context.Context, chatId string) (*Chat, error) {
 	//Get chats collection
