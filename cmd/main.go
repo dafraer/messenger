@@ -26,6 +26,7 @@ func main() {
 	serverAddress := os.Args[2]
 	//mongodb://localhost:27017
 	mongoURI := os.Args[3]
+
 	//Create logger
 	logger, err := zap.NewDevelopment()
 	var sugar *zap.SugaredLogger

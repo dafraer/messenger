@@ -19,11 +19,11 @@ type Manager struct {
 	logger     *zap.SugaredLogger
 	//chats field stores map of chats where client slice is stored as a value
 	chats map[string][]*Client
-	store *store.Storage
+	store store.Storer
 }
 
 // NewManager creates new websocket manager
-func NewManager(logger *zap.SugaredLogger, store *store.Storage) *Manager {
+func NewManager(logger *zap.SugaredLogger, store store.Storer) *Manager {
 	m := &Manager{
 		WSUpgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,

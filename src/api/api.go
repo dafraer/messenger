@@ -25,12 +25,12 @@ type authRequest struct {
 type Server struct {
 	manager      *ws.Manager
 	logger       *zap.SugaredLogger
-	tokenManager *token.JWTManager
-	store        *store.Storage
+	tokenManager token.Manager
+	store        store.Storer
 }
 
 // New creates new server
-func New(manager *ws.Manager, logger *zap.SugaredLogger, tokenManager *token.JWTManager, store *store.Storage) *Server {
+func New(manager *ws.Manager, logger *zap.SugaredLogger, tokenManager token.Manager, store store.Storer) *Server {
 	return &Server{
 		manager:      manager,
 		logger:       logger,
@@ -299,7 +299,6 @@ func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 	//get chatId from the query
 	chatId := r.PathValue("chatId")
 
-	//Check if user is authorised
 	//Get chat data from the database
 	chat, err := s.store.GetChat(r.Context(), chatId)
 	if err != nil {
@@ -383,6 +382,7 @@ func (s *Server) handleNewChat(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handleRemove removes user from the chat
 func (s *Server) handleRemove(w http.ResponseWriter, r *http.Request) {
 	chatId := r.PathValue("chatId")
 

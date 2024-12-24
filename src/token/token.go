@@ -11,6 +11,11 @@ const (
 	tokenLiveSpan = time.Hour * 24 * 30
 )
 
+type Manager interface {
+	NewToken(userId string) (string, error)
+	Verify(tokenString string) (*jwt.RegisteredClaims, error)
+}
+
 type JWTManager struct {
 	signingKey string
 }

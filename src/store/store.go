@@ -11,13 +11,24 @@ import (
 
 var ErrUserExists = fmt.Errorf("user exists")
 
+type Storer interface {
+	NewUser(ctx context.Context, username string, password string) error
+	GetUser(ctx context.Context, username string) (*User, error)
+	NewChat(ctx context.Context, members []string, owner string) (interface{}, error)
+	GetChat(ctx context.Context, chatId string) (*Chat, error)
+	GetChats(ctx context.Context, username string) ([]Chat, error)
+	GetMessages(ctx context.Context, chatId string) ([]Message, error)
+	SaveMessage(ctx context.Context, msg Message) error
+	RemoveUserFromChat(ctx context.Context, username string, chatId string) error
+}
+
 type Storage struct {
 	db *mongo.Client
 }
 
 type User struct {
 	Id       string `bson:"_id,omitempty" json:"id,omitempty"`
-	Username string `bson:"username"`
+	Username string `bson:"username" json:"username"`
 	Password string `bson:"password,omitempty" json:"password,omitempty"`
 }
 
