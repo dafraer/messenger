@@ -232,6 +232,7 @@ func (s *Server) authorize(fn func(w http.ResponseWriter, r *http.Request)) func
 
 // handleUser writes User object as a response
 func (s *Server) handleUser(w http.ResponseWriter, r *http.Request) {
+	s.logger.Debugw("handleUser called", "request", r)
 	//Get username from the query
 	username := r.PathValue("username")
 

@@ -18,7 +18,7 @@ import (
 
 func main() {
 	//Check that we got 3 arguments
-	if len(os.Args) != 3 {
+	if len(os.Args) != 4 {
 		panic("Signing key, Server address and Mongo URI must be passed as arguments")
 	}
 	signingKey := os.Args[1]
