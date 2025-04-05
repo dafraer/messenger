@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Search Users – Adres‑talk</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        /* === Page Layout === */
+        body, html { height: 100%; }
+        main { padding: 2rem; max-width: 600px; margin: auto; }
+
+        /* === Search Form === */
+        .user-search-form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .user-search-form input {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .user-search-form input:focus {
+            outline: none;
+            border-color: #FF3008;
+            box-shadow: 0 0 0 2px rgba(255,48,8,0.2);
+        }
+        .user-search-form .btn.signup {
+            padding: 0 1.5rem;
+        }
+
+        /* === User List === */
+        .user-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .user-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fff;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+        .user-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 1rem;
+        }
+        .user-info {
+            flex: 1;
+        }
+        .user-info h4 {
+            margin: 0;
+            font-size: 1rem;
+            color: #333;
+        }
+        .user-info p {
+            margin: 0.25rem 0 0;
+            font-size: 0.85rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+<!-- Header -->
+<header>
+    <div class="logo">Adres<span>talk</span></div>
+    <nav>
+        <a href="search.html" class="btn login">Search</a>
+        <a href="profile.html" class="btn login">Profile</a>
+        <a href="logout.html" class="btn signup">Log Out</a>
+    </nav>
+</header>
+
+<main>
+    <!-- Search form -->
+    <form class="user-search-form" action="#" method="GET">
+        <input
+                type="text"
+                name="q"
+                placeholder="Search users…"
+                aria-label="Search users"
+        />
+        <button type="submit" class="btn signup">Go</button>
+    </form>
+
+    <!-- Example results -->
+    <div class="user-list">
+        <div class="user-item">
+            <img src="https://via.placeholder.com/40" alt="Alice’s avatar" />
+            <div class="user-info">
+                <h4>Alice</h4>
+                <p>@alice123</p>
+            </div>
+            <a href="chat.html" class="btn signup">Message</a>
+        </div>
+
+        <div class="user-item">
+            <img src="https://via.placeholder.com/40" alt="Bob’s avatar" />
+            <div class="user-info">
+                <h4>Bob</h4>
+                <p>@bob_the_builder</p>
+            </div>
+            <a href="chat.html" class="btn signup">Message</a>
+        </div>
+
+        <div class="user-item">
+            <img src="https://via.placeholder.com/40" alt="Charlie’s avatar" />
+            <div class="user-info">
+                <h4>Charlie</h4>
+                <p>@charlie_chap</p>
+            </div>
+            <a href="chat.html" class="btn signup">Message</a>
+        </div>
+
+        <!-- More .user-item as needed -->
+    </div>
+</main>
+</body>
+</html>

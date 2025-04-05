@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Logged Out – Adres‑talk</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        /* Centered logout card */
+        .logout-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 72px); /* account for header */
+            background-color: #f9f9f9;
+            padding: 2rem;
+        }
+        .logout-card {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .logout-card h2 {
+            margin-bottom: 1rem;
+            color: #FF3008;
+        }
+        .logout-card p {
+            margin-bottom: 1.5rem;
+            color: #333;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+<!-- Header with Login/Sign Up -->
+<header>
+    <div class="logo">Adres<span>talk</span></div>
+    <nav>
+        <a href="login.html" class="btn login">Login</a>
+        <a href="signup.html" class="btn signup">Sign Up</a>
+    </nav>
+</header>
+
+<main>
+    <div class="logout-container">
+        <div class="logout-card">
+            <h2>Logged Out</h2>
+            <p>You have successfully logged out of Adres‑talk.</p>
+            <a href="login.html" class="btn signup">Log In Again</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>
