@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Log In – Adres‑talk</title>
+    <title>Sign Up – Adres‑talk</title>
     <link rel="stylesheet" href="styles.css" />
     <style>
-        /* ----- Login Form Styles ----- */
-        .login-container {
+        /* ----- Signup Form Styles ----- */
+        .signup-container {
             display: flex;
             justify-content: center;
             align-items: center;
@@ -15,7 +15,7 @@
             background-color: #f9f9f9;
             padding: 2rem;
         }
-        .login-card {
+        .signup-card {
             background: #fff;
             padding: 2rem;
             border-radius: 8px;
@@ -23,7 +23,7 @@
             width: 100%;
             max-width: 400px;
         }
-        .login-card h2 {
+        .signup-card h2 {
             text-align: center;
             margin-bottom: 1.5rem;
             color: #FF3008;
@@ -56,18 +56,6 @@
             margin-top: 0.5rem;
             display: none;
         }
-        .forgot-password {
-            display: block;
-            text-align: right;
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            color: #FF3008;
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-        .forgot-password:hover {
-            color: #e62900;
-        }
         .btn-submit {
             width: 100%;
             margin-top: 1rem;
@@ -75,31 +63,29 @@
     </style>
 </head>
 <body>
-<!-- same header as homepage/signup -->
+<!-- reuse the same header -->
 <header>
     <div class="logo">Adres<span>talk</span></div>
     <nav>
-        <button class="btn login">Login</button>
-        <button class="btn signup">Sign Up</button>
+        <a href="login.html" class="btn login">Login</a>
+        <a href="signup.html" class="btn signup">Sign Up</a>
     </nav>
 </header>
 
 <main>
-    <div class="login-container">
-        <div class="login-card">
-            <h2>Welcome Back</h2>
-            <form id="login-form" novalidate>
+    <div class="signup-container" id="signup-container">
+        <div class="signup-card" id="signup-card">
+            <h2>Create Account</h2>
+            <form id="signup-form" novalidate>
                 <div class="form-group">
                     <label for="username">Username</label>
                     <input
                             type="text"
                             id="username"
                             name="username"
+                            required
                             placeholder="Enter your username"
                     />
-                    <div class="error-message" id="username-error">
-                        Username is required.
-                    </div>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
@@ -107,46 +93,22 @@
                             type="password"
                             id="password"
                             name="password"
-                            placeholder="Enter your password"
+                            required
+                            placeholder="At least 8 characters"
                     />
                     <div class="error-message" id="password-error">
-                        Password is required.
+                        Password must be at least 8 characters.
                     </div>
                 </div>
-                <a href="#" class="forgot-password">Forgot password?</a>
                 <button type="submit" class="btn signup btn-submit">
-                    Log In
+                    Sign Up
                 </button>
             </form>
         </div>
     </div>
-</main>
 
-<script>
-    document
-        .getElementById('login-form')
-        .addEventListener('submit', function (e) {
-            let valid = true;
-            const fields = [
-                { id: 'username', errId: 'username-error' },
-                { id: 'password', errId: 'password-error' }
-            ];
-            fields.forEach(f => {
-                const input = document.getElementById(f.id);
-                const err = document.getElementById(f.errId);
-                if (!input.value.trim()) {
-                    err.style.display = 'block';
-                    valid = false;
-                } else {
-                    err.style.display = 'none';
-                }
-            });
-            if (!valid) {
-                e.preventDefault();
-            } else {
-                // proceed with actual login…
-            }
-        });
-</script>
+</main>
+<script src="scripts/consts.js"></script>
+<script src="scripts/signup.js"></script>
 </body>
 </html>

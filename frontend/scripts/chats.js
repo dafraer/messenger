@@ -1,15 +1,16 @@
+//check login
 if (document.defaultView.localStorage.getItem('token')) {
-    const elements = document.getElementsByClassName('h-button')
-    elements[0].remove();
-    elements[0].remove();
-    const logoutButton = document.createElement('a');
-    logoutButton.innerText = 'Log out';
-    logoutButton.className = 'h-button';
-    logoutButton.href = 'main.html';
-    logoutButton.addEventListener('click', logOut);
-    document.getElementById('header').appendChild(logoutButton);
+    const e = document.getElementById("username")
+    e.innerText = document.defaultView.localStorage.getItem('username')
+} else {
+    const username = document.getElementById("username")
+    const logoutButton = document.getElementById("logout_button")
+    username.remove()
+    logoutButton.className = "btn login"
+    logoutButton.href = "login.html"
+    logoutButton.innerText = "Login"
+}
+if (document.defaultView.localStorage.getItem('chat')) {
+
 }
 
-if (document.defaultView.localStorage.getItem('chat')) {
-       
-}

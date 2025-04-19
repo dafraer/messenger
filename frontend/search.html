@@ -75,54 +75,29 @@
     <div class="logo">Adres<span>talk</span></div>
     <nav>
         <a href="search.html" class="btn login">Search</a>
-        <a href="profile.html" class="btn login">Profile</a>
-        <a href="logout.html" class="btn signup">Log Out</a>
+        <a id="username" class="btn login">Username</a>
+        <a id="logout_button" href="logout.html" class="btn signup">Log Out</a>
     </nav>
 </header>
 
 <main>
     <!-- Search form -->
-    <form class="user-search-form" action="#" method="GET">
+    <form class="user-search-form">
         <input
+                id="search-input"
                 type="text"
                 name="q"
                 placeholder="Search users…"
                 aria-label="Search users"
         />
-        <button type="submit" class="btn signup">Go</button>
+        <button id="search-button" type="submit" class="btn signup">Go</button>
     </form>
 
-    <!-- Example results -->
     <div class="user-list">
-        <div class="user-item">
-            <img src="https://via.placeholder.com/40" alt="Alice’s avatar" />
-            <div class="user-info">
-                <h4>Alice</h4>
-                <p>@alice123</p>
-            </div>
-            <a href="chat.html" class="btn signup">Message</a>
-        </div>
-
-        <div class="user-item">
-            <img src="https://via.placeholder.com/40" alt="Bob’s avatar" />
-            <div class="user-info">
-                <h4>Bob</h4>
-                <p>@bob_the_builder</p>
-            </div>
-            <a href="chat.html" class="btn signup">Message</a>
-        </div>
-
-        <div class="user-item">
-            <img src="https://via.placeholder.com/40" alt="Charlie’s avatar" />
-            <div class="user-info">
-                <h4>Charlie</h4>
-                <p>@charlie_chap</p>
-            </div>
-            <a href="chat.html" class="btn signup">Message</a>
-        </div>
-
-        <!-- More .user-item as needed -->
+        <!-- Users will be added here -->
     </div>
 </main>
+<script src="scripts/consts.js"></script>
+<script src="scripts/search.js"></script>
 </body>
 </html>

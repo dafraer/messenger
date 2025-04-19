@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Logged Out – Adres‑talk</title>
+    <title>Sign Up Successful – Adres‑talk</title>
     <link rel="stylesheet" href="styles.css" />
     <style>
-        /* Centered logout card */
-        .logout-container {
+        /* Signup‑card styles */
+        .signup-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: calc(100vh - 72px); /* account for header */
+            min-height: calc(100vh - 72px);
             background-color: #f9f9f9;
             padding: 2rem;
         }
-        .logout-card {
+        .signup-card {
             background: #fff;
             padding: 2rem;
             border-radius: 8px;
@@ -24,11 +24,11 @@
             max-width: 400px;
             text-align: center;
         }
-        .logout-card h2 {
+        .signup-card h2 {
             margin-bottom: 1rem;
             color: #FF3008;
         }
-        .logout-card p {
+        .signup-card p {
             margin-bottom: 1.5rem;
             color: #333;
             font-size: 1rem;
@@ -36,7 +36,6 @@
     </style>
 </head>
 <body>
-<!-- Header with Login/Sign Up -->
 <header>
     <div class="logo">Adres<span>talk</span></div>
     <nav>
@@ -46,13 +45,11 @@
 </header>
 
 <main>
-    <script src="scripts/consts.js"></script>
-    <script>document.defaultView.localStorage.clear()</script>
-    <div class="logout-container">
-        <div class="logout-card">
-            <h2>Logged Out</h2>
-            <p>You have successfully logged out of Adres‑talk.</p>
-            <a href="login.html" class="btn signup">Log In Again</a>
+    <div class="signup-container">
+        <div class="signup-card">
+            <h2>Sign Up Successful!</h2>
+            <p>Your account has been created. You can now log in.</p>
+            <a href="login.html" class="btn signup">Log In</a>
         </div>
     </div>
 </main>
