@@ -3,7 +3,9 @@ package ws
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/dafraer/messenger/src/store"
+	"net"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -47,7 +49,7 @@ func NewClient(conn *websocket.Conn, manager *Manager, username string) *Client 
 func (c *Client) ReadMessages(ctx context.Context) {
 	//Graceful close of the connection
 	defer func() {
-		if err := c.manager.RemoveClient(ctx, c); err != nil {
+		if err := c.manager.RemoveClient(context.Background(), c); err != nil {
 			c.logger.Errorw("Error removing client", "error", err)
 		}
 	}()
@@ -75,7 +77,9 @@ func (c *Client) ReadMessages(ctx context.Context) {
 		//Read message from websocket connection
 		_, payload, err := c.connection.ReadMessage()
 		if err != nil {
-			c.logger.Errorw("Error reading message", "error", err)
+			if !errors.Is(err, websocket.ErrCloseSent) || errors.Is(err, net.ErrClosed) {
+				c.logger.Errorw("Error reading message", "error", err)
+			}
 			return
 		}
 
@@ -110,7 +114,7 @@ func (c *Client) WriteMessages(ctx context.Context) {
 
 	//Gracefully remove the client
 	defer func() {
-		if err := c.manager.RemoveClient(ctx, c); err != nil {
+		if err := c.manager.RemoveClient(context.Background(), c); err != nil {
 			c.logger.Errorw("error removing client", "error", err)
 		}
 		ticker.Stop()
@@ -144,6 +148,9 @@ func (c *Client) WriteMessages(ctx context.Context) {
 			//Send the ping
 			if err := c.connection.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				c.logger.Errorw("Error writing ping message", "error", err)
+				if !errors.Is(err, websocket.ErrCloseSent) || errors.Is(err, net.ErrClosed) {
+					c.logger.Errorw("Error writing ping message", "error", err)
+				}
 				return
 			}
 

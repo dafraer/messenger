@@ -39,11 +39,11 @@ type Chat struct {
 }
 
 type Message struct {
-	ChatId string `bson:"chat_id"`
-	From   string `bson:"from"`
-	Text   string `bson:"text"`
-	//unix utc time
-	Time int64 `bson:"time"`
+	ChatId string `bson:"chat_id" json:"chat_id"`
+	From   string `bson:"from"    json:"from"`
+	Text   string `bson:"text"    json:"text"`
+	//Unix utc time
+	Time int64 `bson:"time"    json:"time"`
 }
 
 // New creates new storage instance with mongo client as the only field

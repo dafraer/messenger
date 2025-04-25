@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dafraer/messenger/src/store"
 	"github.com/dafraer/messenger/src/token"
@@ -161,7 +162,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		s.logger.Errorw("Error decoding json", "error", err)
 		return
 	}
-
+	s.logger.Debugw("hmm", "request body", body)
 	//Get user from the database
 	user, err := s.store.GetUser(r.Context(), body.Username)
 	if err != nil {
@@ -184,6 +185,15 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	http.SetCookie(w, &http.Cookie{
+		Name:     "auth_token",
+		Value:    accessToken,
+		Expires:  time.Now().Add(30 * 24 * time.Hour),
+		HttpOnly: true,
+		Secure:   r.TLS != nil,
+		Path:     "/",
+		SameSite: http.SameSiteStrictMode,
+	})
 	//Create a json object from tokens
 	response, err := json.Marshal(accessToken)
 	if err != nil {
@@ -202,22 +212,26 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 func (s *Server) authorize(fn func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//Get authorization header
-		authHeader := r.Header.Get("Authorization")
+		tokenString := ""
+		cookie, err := r.Cookie("auth_token")
+		if err != nil {
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+				return
+			}
 
-		//Check if the authorization header is empty
-		if authHeader == "" {
-			http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
-			return
+			//Parse the header
+			parts := strings.Split(authHeader, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+				return
+			}
+			tokenString = parts[1]
+		} else {
+			tokenString = cookie.Value
 		}
-
-		//Parse the header
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
-			return
-		}
-		tokenString := parts[1]
-
+		//s.logger.Debugw("hmm3", "tokenString", tokenString)
 		//Verify the token
 		claims, err := s.tokenManager.Verify(tokenString)
 		if err != nil {
