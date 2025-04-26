@@ -344,3 +344,125 @@ header {
     margin-top: 10px;
     min-height: 1.2em;
 }
+/* --- Media Query for Mobile - Single Page Scroll Flow --- */
+@media (max-width: 768px) {
+
+    html, body {
+        height: auto; /* Allow height to be determined by content */
+        overflow-x: hidden; /* Prevent horizontal scroll */
+        overflow-y: auto; /* Allow vertical scroll for the whole page */
+    }
+
+    #app-container {
+        height: auto; /* Let container height grow with content */
+        min-height: 100vh; /* Ensure it fills screen initially */
+        max-height: none; /* No max height */
+        padding: 10px;
+        border-radius: 0;
+        box-shadow: none;
+        overflow: visible; /* Allow content to determine scroll */
+    }
+
+    header {
+        padding: 10px;
+        margin-bottom: 15px; /* Space below header */
+        /* Other header styles */
+    }
+
+    /* Let main layout stack naturally */
+    #main-layout {
+        display: block; /* Simplest stacking: each child is a block */
+        height: auto;
+        overflow: visible;
+    }
+
+    /* Sidebar takes natural height based on its content */
+    #sidebar {
+        width: 100%;
+        height: auto; /* Natural height */
+        max-height: none;
+        overflow: visible; /* No internal scrolling */
+        border-right: none;
+        border-bottom: 1px solid var(--border-color); /* Separator */
+        padding: 15px 12px;
+        margin-bottom: 15px; /* Space below sidebar section */
+    }
+
+    #search-container {
+        margin-bottom: 20px; /* Space after search */
+    }
+    /* Styles for search inputs/buttons */
+    #search-username, #search-button { padding: 11px 10px; font-size: 1em; }
+
+    /* Chat list container takes natural height */
+    #chats-container {
+        /* Remove flex/overflow properties */
+        overflow: visible;
+        min-height: auto;
+    }
+    #chats-container h3 {
+        margin-bottom: 10px; /* Space above list */
+    }
+    #chat-list {
+        /* ul list takes natural height */
+        list-style: none;
+        padding: 0;
+    }
+    /* Ensure list items are clearly visible */
+    #chat-list li {
+        padding: 12px 10px;
+        margin-bottom: 5px;
+        border: 1px solid var(--border-color); /* Add temporary border for debugging visibility */
+        min-height: 40px; /* Ensure they have some height */
+        color: white; /* Ensure text isn't hidden */
+        background-color: #333; /* Ensure background isn't hiding them */
+    }
+
+    /* Chat area takes natural height */
+    #chat-area {
+        width: 100%;
+        height: auto; /* Natural height */
+        overflow: visible; /* No internal scrolling */
+        padding: 10px;
+        /* Let child elements stack naturally */
+        display: block;
+    }
+    #chat-header {
+        padding-bottom: 10px;
+        margin-bottom: 15px; /* Space below header */
+    }
+    #messages-container {
+        height: auto; /* Natural height based on messages */
+        min-height: 50px; /* Give it some space */
+        padding: 0 5px;
+        /* Remove internal scroll */
+        overflow: visible;
+    }
+    /* Message styling */
+    .message {
+        margin-bottom: 12px;
+        /* Other styles */
+    }
+
+    /* Input container */
+    #message-input-container {
+        margin-top: 15px;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+        /* Optional: Make input sticky at the bottom */
+        position: sticky;
+        bottom: 0;
+        background-color: var(--surface-color);
+        padding-bottom: 10px; /* Padding below sticky input */
+        /* Adjust margins to counter parent padding if sticky */
+        margin-left: -10px;
+        margin-right: -10px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    #message-input, #message-form button {
+        padding: 12px 10px;
+        font-size: 1em;
+    }
+}
+/* --- END Media Query --- */

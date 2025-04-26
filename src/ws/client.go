@@ -77,7 +77,7 @@ func (c *Client) ReadMessages(ctx context.Context) {
 		//Read message from websocket connection
 		_, payload, err := c.connection.ReadMessage()
 		if err != nil {
-			if !errors.Is(err, websocket.ErrCloseSent) || errors.Is(err, net.ErrClosed) {
+			if !websocket.IsCloseError(err) {
 				c.logger.Errorw("Error reading message", "error", err)
 			}
 			return
@@ -147,7 +147,6 @@ func (c *Client) WriteMessages(ctx context.Context) {
 		case <-ticker.C:
 			//Send the ping
 			if err := c.connection.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				c.logger.Errorw("Error writing ping message", "error", err)
 				if !errors.Is(err, websocket.ErrCloseSent) || errors.Is(err, net.ErrClosed) {
 					c.logger.Errorw("Error writing ping message", "error", err)
 				}

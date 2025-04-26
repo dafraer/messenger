@@ -162,7 +162,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		s.logger.Errorw("Error decoding json", "error", err)
 		return
 	}
-	s.logger.Debugw("hmm", "request body", body)
+	//s.logger.Debugw("hmm", "request body", body)
 	//Get user from the database
 	user, err := s.store.GetUser(r.Context(), body.Username)
 	if err != nil {
