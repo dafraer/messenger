@@ -42,7 +42,7 @@ The app features basic one-on-one messaging, with no extra complexity — just a
 
 Adres-talk isn’t meant to be a full-featured chat application — it’s a lightweight, educational tool that helped me understand how WebSockets work under the hood. If you're curious about the basics of real-time messaging or want a starting point for your own chat experiments, this project might be a helpful reference.
 
-
+<img src="./screen1.png" alt="chat example" width="2880" height="1586">
 
 <!-- GETTING STARTED -->
 ## Getting Started
@@ -59,7 +59,7 @@ You can easily run Luodingo locally using Docker Compose by following these step
 Open your terminal and run:
 
 ```sh
-wget https://raw.githubusercontent.com/dafraer/luodingo-tg-bot/refs/heads/main/docker-compose.yaml
+wget https://raw.githubusercontent.com/dafraer/messenger/refs/heads/main/docker-compose.yaml
 ```  
 
 #### 2. Set Up Architecture and  Environment Variables
