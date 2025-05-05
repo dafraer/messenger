@@ -1,0 +1,18 @@
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    restart: always
+  service:
+    #Make sure to change architecture to amd64 if you are running on X86-64
+    image: "dafraer/messenger:4.0-arm64"
+    container_name: service
+    depends_on:
+      - mongo
+    environment:
+      #Change the environmental variables to your own
+      MONGO_URI: "mongodb://mongo:27017"
+      SIGNING_KEY: "super_secret_signing_key"
+    restart: always
+    ports:
+      - "8080:8080"
