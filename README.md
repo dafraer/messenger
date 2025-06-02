@@ -48,12 +48,12 @@ Adres-talk isn’t meant to be a full-featured chat application — it’s a lig
 ## Getting Started
 
 ### Try Adres-talk for Yourself
-WordBuddy is available at [adrestalk.cc](https://adrestalk.cc)! You can text me to try it out, my username is dafraer.
+Messenger is available at [adrestalk.cc](https://adrestalk.cc)! You can text me to try it out, my username is dafraer.
 For a full list of features, check out the [Features](#features) section.
 
 ### Run Locally
 
-You can easily run Luodingo locally using Docker Compose by following these steps:
+You can easily run Messenger locally using Docker Compose by following these steps:
 
 #### 1. Download the `docker-compose.yaml` file
 Open your terminal and run:
