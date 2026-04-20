@@ -5,7 +5,7 @@ services:
     restart: always
   service:
     #Make sure to change architecture to amd64 if you are running on X86-64
-    image: "dafraer/messenger:4.0-arm64"
+    image: "dafraer/messenger:5.1-arm64"
     container_name: service
     depends_on:
       - mongo
@@ -15,4 +15,4 @@ services:
       SIGNING_KEY: "super_secret_signing_key"
     restart: always
     ports:
-      - "8080:8080"
+      - "8000:8080"

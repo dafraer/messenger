@@ -75,7 +75,7 @@ Run the following command to start Messenger in the background:
 sudo docker-compose up -d
 ```  
 
-Now your bot should be up and running locally!
+Now your web app should be up and running locally!
 
 
 
