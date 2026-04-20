@@ -77,7 +77,12 @@ func (c *Client) ReadMessages(ctx context.Context) {
 		//Read message from websocket connection
 		_, payload, err := c.connection.ReadMessage()
 		if err != nil {
-			if !websocket.IsCloseError(err) {
+			if !websocket.IsCloseError(err,
+				websocket.CloseNormalClosure,
+				websocket.CloseGoingAway,
+				websocket.CloseNoStatusReceived,
+				websocket.CloseAbnormalClosure,
+			) {
 				c.logger.Errorw("Error reading message", "error", err)
 			}
 			return
@@ -93,8 +98,15 @@ func (c *Client) ReadMessages(ctx context.Context) {
 		//Set message author to the actual client to prevent impersonation
 		request.From = c.username
 
+		//Snapshot recipients under read lock to avoid data race and prevent
+		//blocking channel sends while holding the lock
+		c.manager.mu.RLock()
+		recipients := make([]*Client, len(c.manager.chats[request.ChatId]))
+		copy(recipients, c.manager.chats[request.ChatId])
+		c.manager.mu.RUnlock()
+
 		//Iterate through chat members and send message
-		for _, client := range c.manager.chats[request.ChatId] {
+		for _, client := range recipients {
 			if client != c && client != nil {
 				client.writer <- request
 			}
@@ -147,7 +159,7 @@ func (c *Client) WriteMessages(ctx context.Context) {
 		case <-ticker.C:
 			//Send the ping
 			if err := c.connection.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-				if !errors.Is(err, websocket.ErrCloseSent) || errors.Is(err, net.ErrClosed) {
+				if !errors.Is(err, websocket.ErrCloseSent) && !errors.Is(err, net.ErrClosed) {
 					c.logger.Errorw("Error writing ping message", "error", err)
 				}
 				return

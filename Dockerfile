@@ -15,5 +15,5 @@ run go build -o messenger ./cmd
 fROM alpine:3.21
 WORKDIR /app
 COPY --from=builder /app/messenger .
-COPY --from=builder /app/frontend .
+COPY --from=builder /app/frontend ./frontend
 CMD ["sh", "-c", "./messenger $SIGNING_KEY :8080 $MONGO_URI"]

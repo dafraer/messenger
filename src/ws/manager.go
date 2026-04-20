@@ -58,6 +58,30 @@ func (m *Manager) AddClient(ctx context.Context, client *Client) error {
 	return nil
 }
 
+// AddChatClients registers all currently connected members of a newly created chat
+// so messages are routed without waiting for a reconnect.
+func (m *Manager) AddChatClients(chatId string, members []string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for client := range m.clients {
+		for _, member := range members {
+			if client.username != member {
+				continue
+			}
+			already := false
+			for _, existing := range m.chats[chatId] {
+				if existing == client {
+					already = true
+					break
+				}
+			}
+			if !already {
+				m.chats[chatId] = append(m.chats[chatId], client)
+			}
+		}
+	}
+}
+
 // RemoveClient removes websocket client from the manager and closes the connection
 func (m *Manager) RemoveClient(ctx context.Context, client *Client) error {
 	m.mu.Lock()

@@ -12,6 +12,7 @@ import (
 	"github.com/dafraer/messenger/src/store"
 	"github.com/dafraer/messenger/src/token"
 	"github.com/dafraer/messenger/src/ws"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -236,6 +237,7 @@ func (s *Server) authorize(fn func(w http.ResponseWriter, r *http.Request)) func
 		claims, err := s.tokenManager.Verify(tokenString)
 		if err != nil {
 			http.Error(w, "Error validating token", http.StatusUnauthorized)
+			return
 		}
 
 		//Pass username of the user as a context value
@@ -246,9 +248,9 @@ func (s *Server) authorize(fn func(w http.ResponseWriter, r *http.Request)) func
 
 // handleUser writes User object as a response
 func (s *Server) handleUser(w http.ResponseWriter, r *http.Request) {
-	s.logger.Debugw("handleUser called", "request", r)
 	//Get username from the query
 	username := r.PathValue("username")
+	s.logger.Debugw("handleUser called", "username", username)
 
 	//Get user from the db
 	user, err := s.store.GetUser(r.Context(), username)
@@ -378,6 +380,11 @@ func (s *Server) handleNewChat(w http.ResponseWriter, r *http.Request) {
 		s.logger.Errorw("Error creating chat", "error", err)
 		http.Error(w, "Error creating chat", http.StatusInternalServerError)
 		return
+	}
+
+	//Register new chat in the WS manager so connected clients receive messages immediately
+	if oid, ok := id.(primitive.ObjectID); ok {
+		s.manager.AddChatClients(oid.Hex(), body.Members)
 	}
 
 	//Set header
