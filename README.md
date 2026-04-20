@@ -48,7 +48,7 @@ Adres-talk isn’t meant to be a full-featured chat application — it’s a lig
 ## Getting Started
 
 ### Try Adres-talk for Yourself
-Messenger is available at [adrestalk.cc](https://adrestalk.cc)! You can text me to try it out, my username is dafraer.
+Messenger is available at [adrestalk.org](http://147.45.210.161:2052/)! You can text me to try it out, my username is dafraer.
 For a full list of features, check out the [Features](#features) section.
 
 ### Run Locally
