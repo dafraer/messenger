@@ -5,7 +5,7 @@ services:
     restart: always
   service:
     #Make sure to change architecture to amd64 if you are running on X86-64
-    image: "dafraer/messenger:5.3-arm64"
+    image: "dafraer/messenger:5.4-arm64"
     container_name: service
     depends_on:
       - mongo

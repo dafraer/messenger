@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 displayError(loginErrorP, 'Login failed: Invalid response from server.');
             }
         } catch (error) {
-            displayError(loginErrorP, `Login failed: ${error.message}`);
+            displayError(loginErrorP, 'Something went wrong, please try again.');
         }
     }
 
@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerForm.reset();
             displayInfo(registerSuccessP, 'Registration successful! Please sign in.');
         } catch (error) {
-            displayError(registerErrorP, `Registration failed: ${error.message}`);
+            displayError(registerErrorP, 'Something went wrong, please try again.');
         }
     }
 
@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             storeMessage(msg);
             updateChatListPreview(currentChatId, msg.text);
         } catch (error) {
-            displayError(messageErrorP, `Failed to send: ${error.message}`);
+            displayError(messageErrorP, 'Something went wrong, please try again.');
         }
     }
 
@@ -329,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             renderChatList();
         } catch (error) {
-            displayError(chatsErrorP, `Failed to load chats: ${error.message}`);
+            displayError(chatsErrorP, 'Something went wrong, please try again.');
             if (error.message.includes('401') || error.message.includes('Unauthorized')) handleLogout();
         }
     }
@@ -430,8 +430,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             scrollToBottom(messagesContainer);
         } catch (error) {
-            displayError(messageErrorP, `Failed to load messages: ${error.message}`);
-            messagesContainer.innerHTML = `<p class="m-auto text-error text-sm">Error: ${error.message}</p>`;
+            displayError(messageErrorP, 'Something went wrong, please try again.');
+            messagesContainer.innerHTML = '<p class="m-auto text-error text-sm">Something went wrong, please try again.</p>';
             if (error.message.includes('401') || error.message.includes('Unauthorized')) handleLogout();
         }
     }
@@ -510,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (error.message.includes('404') || error.message.includes('500'))
                 displayError(searchErrorP, `User '${username}' not found.`);
             else
-                displayError(searchErrorP, `Error: ${error.message}`);
+                displayError(searchErrorP, 'Something went wrong, please try again.');
         }
     }
 
@@ -529,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('Server did not return a valid chat ID.');
             }
         } catch (error) {
-            displayError(searchErrorP, `Failed to create chat: ${error.message}`);
+            displayError(searchErrorP, 'Something went wrong, please try again.');
         }
     }
 

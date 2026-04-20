@@ -65,8 +65,8 @@ wget https://raw.githubusercontent.com/dafraer/messenger/refs/heads/main/docker-
 #### 2. Set Up Architecture and  Environment Variables
 - Set MONGO_URI  and SIGNING_KEY environment variables
 - Choose the correct image tag based on your system architecture:
-  - **For x86_64 (AMD64):** Use `5.3-amd64`
-  - **For ARM64 (e.g., Raspberry Pi):** Use `5.3-arm64`
+  - **For x86_64 (AMD64):** Use `5.4-amd64`
+  - **For ARM64 (e.g., Raspberry Pi):** Use `5.4-arm64`
 
 #### 3. Start the Bot
 Run the following command to start Messenger in the background:

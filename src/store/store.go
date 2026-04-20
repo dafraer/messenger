@@ -85,17 +85,29 @@ func (s *Storage) GetUser(ctx context.Context, username string) (*User, error) {
 	return &user, nil
 }
 
-// NewChat creates new chat using members and owner fields. Returns chat id
+// NewChat creates new chat using members and owner fields. Returns chat id.
+// For 2-member chats, returns the existing chat id if one already exists.
 func (s *Storage) NewChat(ctx context.Context, members []string, owner string) (interface{}, error) {
-	//Get chats collection
 	coll := s.db.Database("messenger").Collection("chats")
 
-	//Create new chat in the database
+	if len(members) == 2 {
+		filter := bson.D{
+			{Key: "members", Value: bson.D{{Key: "$all", Value: members}}},
+			{Key: "$expr", Value: bson.D{{Key: "$eq", Value: bson.A{bson.D{{Key: "$size", Value: "$members"}}, 2}}}},
+		}
+		var existing struct {
+			Id primitive.ObjectID `bson:"_id"`
+		}
+		if err := coll.FindOne(ctx, filter).Decode(&existing); err == nil {
+			return existing.Id, nil
+		}
+	}
+
 	res, err := coll.InsertOne(ctx, bson.D{{Key: "members", Value: members}, {Key: "owner", Value: owner}})
 	if err != nil {
 		return nil, err
 	}
-	return res.InsertedID, err
+	return res.InsertedID, nil
 }
 
 // GetChat returns chat info by chat id
