@@ -103,6 +103,7 @@ func (s *Server) serveWS(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.manager.WSUpgrader.Upgrade(w, r, nil)
 	if err != nil {
 		s.logger.Errorw("Error upgrading connection", "err", err)
+		return
 	}
 
 	//Create a new client
